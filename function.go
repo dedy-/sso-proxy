@@ -475,6 +475,42 @@ func readOrgcode(kdOrg string) (jurusan Jurusan) {
 			Major:        "Akupuntur Medik (Acupuncture Medic)",
 			Program:      "Spesialis I (Specialist Program)",
 		},
+		"48.00.01.01": {
+			Faculty:      "Kedokteran",
+			ShortFaculty: "FK",
+			Major:        "Ilmu Penyakit Dalam (Internal Medicine)",
+			Program:      "Spesialis 2 (Sub Specialist Program)",
+		},
+		"50.00.01.01": {
+			Faculty:      "Kedokteran",
+			ShortFaculty: "FK",
+			Major:        "Ilmu Kesehatan Anak (Pediatrics)",
+			Program:      "Spesialis 2 (Sub Specialist Program)",
+		},
+		"51.00.01.01": {
+			Faculty:      "Kedokteran",
+			ShortFaculty: "FK",
+			Major:        "Ilmu Bedah (Surgery)",
+			Program:      "Spesialis 2 (Sub Specialist Program)",
+		},
+		"52.00.01.01": {
+			Faculty:      "Kedokteran",
+			ShortFaculty: "FK",
+			Major:        "Obstetri & Ginekologi (Obstetrics & Gynecology)",
+			Program:      "Spesialis 2 (Sub Specialist Program)",
+		},
+		"53.00.01.01": {
+			Faculty:      "Kedokteran",
+			ShortFaculty: "FK",
+			Major:        "Ilmu Kedokteran Jiwa (Psychiatry)",
+			Program:      "Spesialis 2 (Sub Specialist Program)",
+		},
+		"54.00.01.01": {
+			Faculty:      "Kedokteran",
+			ShortFaculty: "FK",
+			Major:        "Anestesiologi & Terapi Intensif (Anesthesiology & Intensive Therapy)",
+			Program:      "Spesialis 2 (Sub Specialist Program)",
+		},
 		"03.00.01.01": {
 			Faculty:      "Kedokteran",
 			ShortFaculty: "FK",
