@@ -1,20 +1,99 @@
-name: Build Image
+name: Build & Push Docker Image
 
 on:
+  push:
+    branches: [ "main", "master", "release/*" ]
+    tags:     [ "v1.0.1" ]         # e.g., v1.2.3
+  pull_request:
+    branches: [ "main", "master", "release/*" ]
   workflow_dispatch:
+
+# Minimal, explicit permissions
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/sso-proxy
+  DEFAULT_BRANCH: main
 
 jobs:
   build:
-    name: Build
-    uses: RistekCSUI/infra-workflows/.github/workflows/dockerhub-service-build.yml@main
-    with:
-      SERVICES: ''
-      INSTANCE: ''
-      IMAGE: sso-proxy
-      DOCKERHUB_USER: devopsdeka
-      PLATFORMS: linux/amd64
-      IMAGE_TAG: latest
-      RUN_CENTRAL_INFRA_DEPLOY: false
-    secrets:
-      GH_TOKEN: ''
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    name: Build (and Push on non-PR)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Enable emulation for multi-arch
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub (skip on PRs)
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Generate tags and labels based on branch/tag/SHA
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            # 'latest' only for default branch
+            type=raw,value=latest,enable={{is_default_branch}}
+            # short SHA tag for all pushes
+            type=sha,format=short
+            # branch tag (e.g., feature-xyz) normalized
+            type=ref,event=branch
+            # for git tags like v1.2.3, produce 1.2.3 and 1.2
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          labels: |
+            org.opencontainers.image.title=sso-proxy
+            org.opencontainers.image.source=${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+
+      # Build arguments example (edit/remove if not needed)
+      # You can add --build-arg entries under 'build-args' below.
+      - name: Build (and push if not PR)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          # If your Dockerfile is elsewhere: file: ./deploy/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Cache to/from registry for speed
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+          # Optional: pass build args (uncomment lines below)
+          # build-args: |
+          #   APP_ENV=production
+          #   COMMIT_SHA=${{ github.sha }}
+
+  # Optional: Generate SBOM/Provenance attestations on non-PR runs
+  attest:
+    name: Attest (SBOM/Provenance)
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Generate SBOM (syft) — optional
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE_NAME }}:latest
+          format: spdx
+      # To push provenance/SLSA, you can add tool-specific steps here if your org requires it.
